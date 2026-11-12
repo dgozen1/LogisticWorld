@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lojistik Oyunu</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#1b1f24;--mut:#667085;--ac:#e8590c;--bd:#e2e5ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--card:#1e2328;--tx:#eef0f3;--mut:#98a1ad;--ac:#ff8a3d;--bd:#2c333a}}
+:root[data-theme="dark"]{--bg:#14171b;--card:#1e2328;--tx:#eef0f3;--mut:#98a1ad;--ac:#ff8a3d;--bd:#2c333a}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{display:flex;flex-direction:column;height:100%;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:10px 12px}
+h1{font-size:22px;margin:0 0 6px}h2{font-size:17px;margin:0 0 8px}
+.mut{color:var(--mut);font-size:14px}
+input{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:16px;margin:8px 0}
+button{font:inherit;border:0;border-radius:10px;padding:11px 16px;background:var(--ac);color:#fff;font-weight:600}
+button.sec{background:var(--bd);color:var(--tx)}
+#top{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--bd)}
+#top b{display:block}
+#ctrl{display:flex;gap:6px}#ctrl button{padding:6px 10px;font-size:14px}
+#ctrl button.on{background:var(--ac);color:#fff}
+#main{flex:1;overflow-y:auto}
+nav{display:flex;border-top:1px solid var(--bd);background:var(--card)}
+nav button{flex:1;background:none;color:var(--mut);border-radius:0;padding:12px 4px;font-size:13px}
+nav button.on{color:var(--ac)}
+ul{padding-left:20px;margin:6px 0}
+.hide{display:none!important}
+.center{display:flex;flex-direction:column;justify-content:center;height:100%}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="start" class="center">
+    <div class="card">
+      <h1>🚚 Lojistik Oyunu</h1>
+      <p class="mut">Şirketini kur, araç al, şoför tut, teslimatları zamanında yap.</p>
+      <input id="cname" placeholder="Şirket adı" maxlength="30">
+      <button id="go" style="width:100%">Başla</button>
+    </div>
+  </div>
+
+  <div id="game" class="hide" style="display:flex;flex-direction:column;height:100%">
+    <div id="top">
+      <div><b id="tName"></b><span class="mut" id="tTime"></span></div>
+      <div style="text-align:right"><b id="tMoney"></b>
+        <div id="ctrl"><button id="pz">⏸</button><button data-s="1" class="on">1x</button><button data-s="2">2x</button><button data-s="4">4x</button></div>
+      </div>
+    </div>
+    <div id="main"></div>
+    <nav id="nav"></nav>
+  </div>
+</div>
+<script>
+var TABS={
+  merkez:{t:"Merkez",h:"<h2>Merkez</h2><p class='mut'>Merkez il seçimi ve şirket özeti Adım 2'de gelecek.</p><ul><li>✅ Proje iskeleti</li><li>✅ Oyun saati ve hız kontrolü</li><li>⏳ İl seçimi, araç ve şoför alımı</li></ul>"},
+  araclar:{t:"Araçlar",h:"<h2>Araçlar</h2><p class='mut'>Araç alımı, şoförler ve doluluk çubukları (Adım 2 ve 6).</p>"},
+  isler:{t:"İşler",h:"<h2>İşler</h2><p class='mut'>İş listesi, teslim saatleri, ceza ve rezervasyon (Adım 3 ve 5).</p>"},
+  harita:{t:"Rota",h:"<h2>Rota</h2><p class='mut'>Çoklu yük ve rota planı (Adım 6).</p>"}
+};
+var S={name:"",money:500000,t:8*60,speed:1,paused:false};
+var $=function(i){return document.getElementById(i)};
+function save(){try{localStorage.setItem("lojistik_save",JSON.stringify(S))}catch(e){}}
+function load(){try{var v=localStorage.getItem("lojistik_save");return v?JSON.parse(v):null}catch(e){return null}}
+function fmtTime(m){var d=Math.floor(m/1440)+1,h=Math.floor(m%1440/60),mi=Math.floor(m%60);return "Gün "+d+" · "+("0"+h).slice(-2)+":"+("0"+mi).slice(-2)}
+function fmtMoney(n){return Math.round(n).toLocaleString("tr-TR")+" ₺"}
+function render(){$("tName").textContent=S.name;$("tTime").textContent=fmtTime(S.t);$("tMoney").textContent=fmtMoney(S.money)}
+function show(k){$("main").innerHTML="<div class='card'>"+TABS[k].h+"</div>";
+  [].forEach.call($("nav").children,function(b){b.classList.toggle("on",b.dataset.k===k)})}
+function begin(){
+  $("start").classList.add("hide");$("game").classList.remove("hide");
+  var n=$("nav");n.innerHTML="";
+  Object.keys(TABS).forEach(function(k){var b=document.createElement("button");b.textContent=TABS[k].t;b.dataset.k=k;b.onclick=function(){show(k)};n.appendChild(b)});
+  show("merkez");render();
+}
+$("go").onclick=function(){S.name=$("cname").value.trim()||"Yeni Lojistik";begin();save()};
+$("pz").onclick=function(){S.paused=!S.paused;$("pz").textContent=S.paused?"▶":"⏸"};
+[].forEach.call(document.querySelectorAll("#ctrl [data-s]"),function(b){b.onclick=function(){
+  S.speed=+b.dataset.s;[].forEach.call(document.querySelectorAll("#ctrl [data-s]"),function(x){x.classList.toggle("on",x===b)})}});
+// 1 gerçek saniye = 2 oyun dakikası (× hız)
+setInterval(function(){if(!S.paused&&!$("game").classList.contains("hide")){S.t+=2*S.speed;render()}},1000);
+setInterval(function(){if(S.name)save()},10000);
+var old=load();if(old&&old.name){S=old;S.paused=false;begin()}
+</script>
+</body>
+</html>
